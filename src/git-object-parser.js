@@ -52,7 +52,7 @@ function parseBlob(body) {
 }
 
 const treeChildrenTypes = {
-  040: 'tree',
+  40: 'tree',
   100: 'blob',
   120: 'symlink',
   160: 'submodule',
@@ -64,7 +64,7 @@ function parseTree(body) {
   while (i < body.length) {
     let j = i;
     while (body[j]) j++;
-    const [, type, mode, name] = body.slice(i, j).toString('utf8').match(/(\d{3})(\d{3}) (.+)/);
+    const [, type, mode, name] = body.slice(i, j).toString('utf8').match(/(40|100|120|160)(\d{3}) (.+)/);
     children.push({
       type: treeChildrenTypes[type],
       mode,
