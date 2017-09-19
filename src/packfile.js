@@ -77,19 +77,18 @@ function patchDelta(src, delta) {
 module.exports.Packfile = class Packfile {
   constructor(gitDir) {
     this.packDir = path.join(gitDir, 'objects', 'pack');
-    this.idx = {
-      objects: {},
-      packs: [],
-    };
-    fs.readdirSync(this.packDir)
+    this.idxs = fs.readdirSync(this.packDir)
       .filter(name => /\.idx$/.test(name))
       .map(name => name.match(/(pack-[a-f\d]{40})\.idx/)[1])
-      .map((name, i) => this._parseIdx(name, i));
+      .map(name => this._parseIdx(name));
   }
 
-  _parseIdx(name, fileIndex) {
+  _parseIdx(name) {
     const buff = fs.readFileSync(path.join(this.packDir, `${name}.idx`));
-    this.idx.packs.push(`${name}.pack`);
+    const idx = {
+      objects: [],
+      pack: `${name}.pack`
+    };
     if (buff.readUInt32BE(0) === 0xff744f63) {
       const version = buff.readUInt32BE(4);
       let index = 8 + 255 * 4;
@@ -106,7 +105,7 @@ module.exports.Packfile = class Packfile {
           offset += buff.readUInt32BE(off64 += 4);
           off64 += 4;
         }
-        this.idx.objects[sha1] = { offset, fileIndex };
+        idx.objects.push({ sha1, offset });
       }
     } else {
       let index = 255 * 4;
@@ -115,9 +114,10 @@ module.exports.Packfile = class Packfile {
       for (let i = 0; i < n; i++) {
         const offset = buff.readUInt32BE(index);
         const sha1 = buff.slice(index += 4, index += 20).toString('hex');
-        this.idx.objects[sha1] = { offset, fileIndex };
+        idx.objects.push({ sha1, offset });
       }
     }
+    return idx;
   }
 
   _findByOffset(fd, offset) {
@@ -145,10 +145,34 @@ module.exports.Packfile = class Packfile {
     }
   }
 
+  _binarySearch(objects, sha1) {
+    let x = 0, y = objects.length - 1;
+    while (x <= y) {
+      const c = x + ((y - x) >> 1);
+      const v = objects[c];
+      if (v.sha1.startsWith(sha1)) return v;
+      if (v.sha1 > sha1) {
+        y = c - 1;
+      } else {
+        x = c + 1;
+      }
+    }
+  }
+
   _findBySha1(sha1) {
-    if (!this.idx.objects[sha1]) return;
-    const { offset, fileIndex } = this.idx.objects[sha1];
-    const packFilePath = path.join(this.packDir, this.idx.packs[fileIndex]);
+    let pack;
+    let offset;
+    for (let i = 0; i < this.idxs.length; i++) {
+      const idx = this.idxs[i];
+      const v = this._binarySearch(idx.objects, sha1);
+      if (v) {
+        pack = idx.pack;
+        offset = v.offset;
+        break;
+      }
+    }
+    if (!pack) return;
+    const packFilePath = path.join(this.packDir, pack);
     const fd = fs.openSync(packFilePath, 'r');
     const result = this._findByOffset(fd, offset);
     fs.closeSync(fd);
