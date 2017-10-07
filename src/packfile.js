@@ -53,7 +53,7 @@ function patchDelta(src, delta) {
       if (cmd & 0x01) offset = delta[deltaOffset++];
       if (cmd & 0x02) offset |= (delta[deltaOffset++] << 8);
       if (cmd & 0x04) offset |= (delta[deltaOffset++] << 16);
-      if (cmd & 0x08) offset |= (delta[deltaOffset++] << 24);
+      if (cmd & 0x08) offset |= (delta[deltaOffset++] << 24 >>> 0);
       if (cmd & 0x10) size = delta[deltaOffset++];
       if (cmd & 0x20) size |= (delta[deltaOffset++] << 8);
       if (cmd & 0x40) size |= (delta[deltaOffset++] << 16);
@@ -101,9 +101,9 @@ module.exports.Packfile = class Packfile {
         let offset = buff.readUInt32BE(off32);
         off32 += 4;
         if (offset & 0x80000000) {
-          offset = buff.readUInt32BE(off64) * 4294967296;
-          offset += buff.readUInt32BE(off64 += 4);
-          off64 += 4;
+          offset = buff.readUInt32BE(off64) * 0x100000000;
+          offset += buff.readUInt32BE(off64 + 4);
+          off64 += 8;
         }
         idx.objects.push({ sha1, offset });
       }
