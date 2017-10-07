@@ -2,7 +2,7 @@ const fs = require('fs');
 const zlib = require('zlib');
 const path = require('path');
 
-const ObjectTypeEnum = {
+const ObjTypeEnum = {
   OBJ_COMMIT: 1,
   OBJ_TREE: 2,
   OBJ_BLOB: 3,
@@ -11,7 +11,7 @@ const ObjectTypeEnum = {
   OBJ_REF_DELTA: 7,
 };
 
-const ObjectTypeStrings = {
+const ObjTypeStr = {
   1: 'commit',
   2: 'tree',
   3: 'blob',
@@ -134,13 +134,13 @@ module.exports.Packfile = class Packfile {
       x *= 128; // x << 7
     }
     switch (type) {
-      case ObjectTypeEnum.OBJ_COMMIT:
-      case ObjectTypeEnum.OBJ_TREE:
-      case ObjectTypeEnum.OBJ_BLOB:
-      case ObjectTypeEnum.OBJ_TAG:
+      case ObjTypeEnum.OBJ_COMMIT:
+      case ObjTypeEnum.OBJ_TREE:
+      case ObjTypeEnum.OBJ_BLOB:
+      case ObjTypeEnum.OBJ_TAG:
         return { type, size, buff: inflatePackedObject(fd, offset + i, size) };
-      case ObjectTypeEnum.OBJ_OFS_DELTA:
-      case ObjectTypeEnum.OBJ_REF_DELTA:
+      case ObjTypeEnum.OBJ_OFS_DELTA:
+      case ObjTypeEnum.OBJ_REF_DELTA:
         return this._resolveDelta(fd, offset, type, size, head, i);
     }
   }
@@ -182,12 +182,12 @@ module.exports.Packfile = class Packfile {
   find(sha1) {
     const o = this._findBySha1(sha1);
     if (!o) return;
-    return Buffer.concat([new Buffer(`${ObjectTypeStrings[o.type]} ${o.size}\x00`), o.buff]);
+    return Buffer.concat([new Buffer(`${ObjTypeStr[o.type]} ${o.size}\x00`), o.buff]);
   }
 
   _resolveDelta(fd, offset, type, size, head, i) {
     let src;
-    if (type === ObjectTypeEnum.OBJ_OFS_DELTA) {
+    if (type === ObjTypeEnum.OBJ_OFS_DELTA) {
       let c = head[i++];
       let ofs = c & 7;
       while (c & 0x80) {
