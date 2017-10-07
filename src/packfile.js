@@ -101,7 +101,7 @@ module.exports.Packfile = class Packfile {
         let offset = buff.readUInt32BE(off32);
         off32 += 4;
         if (offset & 0x80000000) {
-          offset = buff.readUInt32BE(off64 * 4294967296);
+          offset = buff.readUInt32BE(off64) * 4294967296;
           offset += buff.readUInt32BE(off64 += 4);
           off64 += 4;
         }
